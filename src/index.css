@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Reset ────────────────────────────────────────────── */
+* { box-sizing: border-box; }
+html {
+  background-color: var(--bg-page, #faf6ee);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-size: 300px 300px;
+  min-height: 100%;
+}
+body {
+  margin: 0;
+  font-family: var(--font, 'Georgia', 'Times New Roman', serif);
+  background: transparent; /* let html background show */
+  min-height: 100vh;
+}
+#root {
+  min-height: 100vh;
+  background: transparent;
+}
+
+/* ════════════════════════════════════════════════════════
+   PAGE BACKGROUND — theme tint over Bible page texture
+   ════════════════════════════════════════════════════════ */
+.sefer-bg {
+  min-height: 100vh;
+  position: relative;
+  background: transparent;
+}
+
+/* Theme colour tint — sits over the page, colour changes per theme */
+.sefer-bg::before {
+  content: '';
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: var(--bg-tint, rgba(250,246,238,0.72));
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Top radial glow */
+.sefer-bg::after {
+  content: '';
+  display: block;
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 80% 30% at 50% 0%,
+    var(--bg-top-glow, rgba(185,140,40,0.18)) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ════════════════════════════════════════════════════════
+   HEADER — clean card
+   ════════════════════════════════════════════════════════ */
+.glass {
+  background: var(--header-bg, rgba(255,254,248,0.97));
+  border-bottom: 1px solid var(--header-bd, rgba(185,140,40,0.14)) !important;
+  box-shadow: 0 1px 12px rgba(0,0,0,0.06);
+}
+
+/* ════════════════════════════════════════════════════════
+   TILES — glossy glass cards
+   ════════════════════════════════════════════════════════ */
+.glass-tile {
+  position: relative;
+  overflow: hidden;
+  background: var(--glass-tile-bg, rgba(255,252,240,1));
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  border: 1px solid var(--glass-tile-bd, rgba(185,140,40,0.22));
+  border-radius: 16px;
+  box-shadow:
+    0 4px 16px rgba(0,0,0,0.09),
+    inset 0 1.5px 0 rgba(255,255,255,0.78),
+    inset 0 -1px 0 rgba(0,0,0,0.05),
+    inset 1px 0 0 rgba(255,255,255,0.42),
+    inset -1px 0 0 rgba(0,0,0,0.04);
+  transition: box-shadow 0.2s, transform 0.2s cubic-bezier(0.34,1.56,0.64,1), background 0.2s, border-color 0.2s;
+}
+
+/* Glassy specular oval highlight */
+.glass-tile::before {
+  content: '';
+  position: absolute;
+  top: 3%; left: 8%;
+  width: 58%; height: 40%;
+  background: radial-gradient(ellipse, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0) 72%);
+  border-radius: 50%;
+  transform: rotate(-10deg);
+  pointer-events: none;
+}
+
+.glass-tile:hover {
+  background: var(--glass-tile-hover-bg, rgba(255,246,216,1));
+  border-color: var(--glass-tile-hover-bd, rgba(185,140,40,0.38));
+  box-shadow:
+    0 8px 28px rgba(0,0,0,0.13),
+    inset 0 1.5px 0 rgba(255,255,255,0.88),
+    inset 0 -1px 0 rgba(0,0,0,0.04),
+    inset 1px 0 0 rgba(255,255,255,0.50),
+    inset -1px 0 0 rgba(0,0,0,0.03);
+  transform: translateY(-3px) scale(1.03);
+}
+
+/* ════════════════════════════════════════════════════════
+   CONTENT CARDS
+   ════════════════════════════════════════════════════════ */
+.glass-card {
+  background: var(--glass-card-bg, rgba(255,253,244,1));
+  border: 1px solid var(--glass-card-bd, rgba(185,140,40,0.14));
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  transition: background 0.2s;
+}
+
+/* Verse / keyword panels */
+.glass-content {
+  background: var(--glass-content-bg, rgba(255,251,235,1));
+  border: 1px solid var(--glass-content-bd, rgba(180,135,38,0.13));
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* Modal */
+.glass-modal {
+  background: var(--glass-card-bg, rgba(255,253,244,1));
+  border: 1px solid var(--glass-card-bd, rgba(185,140,40,0.14));
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.07);
+}
+
+/* ════════════════════════════════════════════════════════
+   INPUTS
+   ════════════════════════════════════════════════════════ */
+.glass-input {
+  background: var(--input-bg, rgba(255,253,242,1));
+  border: 1px solid var(--input-bd, rgba(185,140,40,0.22));
+  color: var(--tile-text, #3a2008);
+  backdrop-filter: blur(8px) saturate(1.3);
+  -webkit-backdrop-filter: blur(8px) saturate(1.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), inset 0 -1px 0 rgba(0,0,0,0.03);
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.glass-input:focus {
+  outline: none;
+  border-color: var(--accent, #a86e10);
+  box-shadow: 0 0 0 3px var(--accent-light, rgba(168,110,16,0.12));
+}
+.glass-input option   { background: #ffffff; color: #1a1007; }
+.glass-input::placeholder { color: var(--tile-muted, rgba(110,75,22,0.45)); }
+
+/* ── Tile label — clean dark text on light background ── */
+.tile-label {
+  /* No text-shadow needed — backgrounds are now light */
+}
+
+/* ── Bible verse rendering ─────────────────────────── */
+.verse-html p { margin-bottom: 0.9rem; line-height: 2; color: #1a1007; font-size: 1.05rem; }
+.verse-html .v {
+  font-size: 0.58rem; font-weight: 700; color: #7c3aed;
+  vertical-align: super; margin-right: 3px; cursor: pointer;
+  background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.25);
+  border-radius: 4px; padding: 1px 4px; transition: background 0.15s; user-select: none;
+}
+.verse-html .v:hover { background: rgba(124,58,237,0.22); color: #5b21b6; }
+.verse-html .wj { color: #b91c1c; }
+
+/* ── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.14); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.24); }
+
+/* ── Pill row ──────────────────────────────────────── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
