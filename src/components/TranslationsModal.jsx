@@ -60,8 +60,9 @@ export default function TranslationsModal({ verseRef, verseId, onClose }) {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 99999,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: 24,
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        padding: '24px 24px 24px',
+        paddingTop: 60,
         background: 'rgba(0,0,0,0.45)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
@@ -97,7 +98,7 @@ export default function TranslationsModal({ verseRef, verseId, onClose }) {
             }}>Translations</p>
             <p style={{
               margin: 0, fontSize: 15, fontWeight: 700,
-              color: 'var(--tile-text)', fontFamily: 'Georgia, serif',
+              color: 'var(--tile-text)', fontFamily: "Lora, Georgia, serif",
             }}>{verseRef}</p>
           </div>
           <button
@@ -146,7 +147,7 @@ export default function TranslationsModal({ verseRef, verseId, onClose }) {
                 {status === 'done' && (
                   <p style={{
                     margin: 0, fontSize: 13,
-                    fontFamily: 'Georgia, serif', fontStyle: 'italic',
+                    fontFamily: "Lora, Georgia, serif", fontStyle: 'italic',
                     lineHeight: 1.7, color: 'var(--tile-text)',
                   }}>"{text}"</p>
                 )}

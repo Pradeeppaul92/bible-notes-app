@@ -1,4 +1,57 @@
-const STORAGE_KEY = 'bible_notes_v1';
+const STORAGE_KEY        = 'bible_notes_v1';
+
+// ── File-based backup (survives localStorage wipe on force-kill) ──────
+const BACKUP_KEYS = [
+  'bible_notes_v1', 'sefer_highlights_v1', 'sefer_proclamations_v1',
+  'sefer_prayers_v1', 'sefer_free_notes_v1', 'sefer_rhema_v1',
+];
+
+function scheduleBackup() {
+  if (!window.seferAPI?.storageWrite) return;
+  const snapshot = {};
+  for (const key of BACKUP_KEYS) {
+    const v = localStorage.getItem(key);
+    if (v) snapshot[key] = v;
+  }
+  window.seferAPI.storageWrite(JSON.stringify(snapshot)).catch(() => {});
+}
+
+export async function forceSyncNow() {
+  if (!window.seferAPI?.storageWrite) return;
+  const snapshot = {};
+  for (const key of BACKUP_KEYS) {
+    const v = localStorage.getItem(key);
+    if (v) snapshot[key] = v;
+  }
+  await window.seferAPI.storageWrite(JSON.stringify(snapshot));
+}
+
+// Call once on app start — restores from file if localStorage is empty/wiped
+export async function initStorage() {
+  if (!window.seferAPI?.storageRead) return;
+  const needsRestore = BACKUP_KEYS.some((key) => {
+    const v = localStorage.getItem(key);
+    return !v || v === '{}' || v === '[]';
+  });
+  if (!needsRestore) return;
+  try {
+    const json = await window.seferAPI.storageRead();
+    if (!json) return;
+    const backup = JSON.parse(json);
+    for (const key of BACKUP_KEYS) {
+      const current = localStorage.getItem(key);
+      const saved   = backup[key];
+      if (saved && (!current || current === '{}' || current === '[]')) {
+        localStorage.setItem(key, saved);
+      }
+    }
+  } catch { /* silent */ }
+}
+
+function lsSet(key, value) {
+  localStorage.setItem(key, value);
+  scheduleBackup();
+}
 
 function load() {
   try {
@@ -10,7 +63,7 @@ function load() {
 }
 
 function save(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  lsSet(STORAGE_KEY, JSON.stringify(data));
 }
 
 export function getNotesForVerse(verseId) {
@@ -44,7 +97,7 @@ export function deleteNote(verseId, noteId) {
 }
 
 // Replace all notes for a verse with a single edited note
-export function saveVerseNote(verseId, verseRef, noteText, verseText) {
+export function saveVerseNote(verseId, verseRef, noteText, verseText, color) {
   const data = load();
   const existing = data[verseId];
   const id = existing?.notes?.[0]?.id || Date.now().toString();
@@ -52,9 +105,14 @@ export function saveVerseNote(verseId, verseRef, noteText, verseText) {
   data[verseId] = {
     verseRef,
     verseText: verseText || existing?.verseText || '',
+    color: color !== undefined ? color : (existing?.color || null),
     notes: [{ id, text: noteText.trim(), createdAt, updatedAt: new Date().toISOString() }],
   };
   save(data);
+}
+
+export function getVerseNoteColor(verseId) {
+  return load()[verseId]?.color || null;
 }
 
 export function deleteVerseNote(verseId) {
@@ -83,13 +141,13 @@ export function setHighlight(verseId, colorId, ref = '', text = '') {
     ref:   ref  || (typeof existing === 'object' ? existing.ref  : '') || '',
     text:  text || (typeof existing === 'object' ? existing.text : '') || '',
   };
-  localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(highlights));
+  lsSet(HIGHLIGHTS_KEY, JSON.stringify(highlights));
 }
 
 export function removeHighlight(verseId) {
   const highlights = getHighlights();
   delete highlights[verseId];
-  localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(highlights));
+  lsSet(HIGHLIGHTS_KEY, JSON.stringify(highlights));
 }
 
 // Return array of { verseId, color, ref, text } sorted by insertion order
@@ -111,17 +169,20 @@ export function getProclamations() {
   catch { return []; }
 }
 
-export function saveProclamation(p) { // { id, ref, text }
+export function saveProclamation(p) { // { id, ref, text, translation? }
   const list = getProclamations();
-  if (!list.find((x) => x.id === p.id)) {
+  const idx = list.findIndex((x) => x.id === p.id);
+  if (idx >= 0) {
+    list[idx] = p;
+  } else {
     list.push(p);
-    localStorage.setItem(PROCLAMATIONS_KEY, JSON.stringify(list));
   }
+  lsSet(PROCLAMATIONS_KEY, JSON.stringify(list));
 }
 
 export function deleteProclamation(id) {
   const list = getProclamations().filter((p) => p.id !== id);
-  localStorage.setItem(PROCLAMATIONS_KEY, JSON.stringify(list));
+  lsSet(PROCLAMATIONS_KEY, JSON.stringify(list));
 }
 
 // ── Prayer blocks ─────────────────────────────────────
@@ -143,12 +204,16 @@ export function savePrayerBlock(block) {
   } else {
     blocks.unshift(block);
   }
-  localStorage.setItem(PRAYER_KEY, JSON.stringify(blocks));
+  lsSet(PRAYER_KEY, JSON.stringify(blocks));
 }
 
 export function deletePrayerBlock(id) {
   const blocks = getPrayerBlocks().filter((b) => b.id !== id);
-  localStorage.setItem(PRAYER_KEY, JSON.stringify(blocks));
+  lsSet(PRAYER_KEY, JSON.stringify(blocks));
+}
+
+export function savePrayerBlocks(blocks) {
+  lsSet(PRAYER_KEY, JSON.stringify(blocks));
 }
 
 // ── Free notes (heading + body) ───────────────────────
@@ -163,12 +228,32 @@ export function saveFreeNote(note) {
   const notes = getFreeNotes();
   const idx = notes.findIndex((n) => n.id === note.id);
   if (idx >= 0) notes[idx] = note; else notes.unshift(note);
-  localStorage.setItem(FREE_NOTES_KEY, JSON.stringify(notes));
+  lsSet(FREE_NOTES_KEY, JSON.stringify(notes));
 }
 
 export function deleteFreeNote(id) {
   const notes = getFreeNotes().filter((n) => n.id !== id);
-  localStorage.setItem(FREE_NOTES_KEY, JSON.stringify(notes));
+  lsSet(FREE_NOTES_KEY, JSON.stringify(notes));
+}
+
+// ── Rhema entries ─────────────────────────────────────
+const RHEMA_KEY = 'sefer_rhema_v1';
+
+export function getRhemaEntries() {
+  try { return JSON.parse(localStorage.getItem(RHEMA_KEY) || '[]'); }
+  catch { return []; }
+}
+
+export function saveRhemaEntry(entry) {
+  const entries = getRhemaEntries();
+  const idx = entries.findIndex((e) => e.id === entry.id);
+  if (idx >= 0) entries[idx] = entry; else entries.unshift(entry);
+  lsSet(RHEMA_KEY, JSON.stringify(entries));
+}
+
+export function deleteRhemaEntry(id) {
+  const entries = getRhemaEntries().filter((e) => e.id !== id);
+  lsSet(RHEMA_KEY, JSON.stringify(entries));
 }
 
 // ── Notes ─────────────────────────────────────────────
@@ -179,6 +264,7 @@ export function getAllVerseNotes() {
       verseId,
       verseRef: entry.verseRef,
       verseText: entry.verseText || '',
+      color: entry.color || null,
       noteCount: entry.notes.length,
       notes: entry.notes,
       lastUpdated: entry.notes[entry.notes.length - 1]?.createdAt,

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
+import seferLogo from './assets/sefer-logo.png';
 import BibleReader from './components/BibleReader';
-import NotesPage from './components/NotesPage';
 import PrayerPage from './components/PrayerPage';
+import RhemaPage from './components/RhemaPage';
 import ThemeSelector from './components/ThemeSelector';
 import DailyVerseModal from './components/DailyVerseModal';
+import OnboardingModal from './components/OnboardingModal';
 import { COLOR_THEMES, DEFAULT_THEME_ID } from './data/colorThemes';
 import { getTodaysVerse, wasDailyVerseShownToday } from './data/dailyVerses';
 import { TRANSLATIONS } from './utils/bibleApi';
+import { initStorage, forceSyncNow } from './utils/storage';
 import './index.css';
 
 function applyTheme(themeId) {
@@ -18,102 +21,278 @@ function applyTheme(themeId) {
   root.style.setProperty('--font', theme.font);
 }
 
-export default function App() {
-  const [page, setPage]       = useState('reader');
-  const [themeId, setThemeId] = useState(() => {
-    return localStorage.getItem('sefer_theme') || DEFAULT_THEME_ID;
-  });
-  const [showDailyVerse, setShowDailyVerse] = useState(() => !wasDailyVerseShownToday());
-  const [translation, setTranslation] = useState(() => localStorage.getItem('sefer_translation') || 'kjv');
+const TABS = [
+  { id: 'reader', label: 'Bible'  },
+  { id: 'prayer', label: 'Prayer' },
+  { id: 'rhema',  label: 'Rhema'  },
+];
 
-  // Apply theme on mount and whenever it changes
+export default function App() {
+  const [ready, setReady]           = useState(false);
+  const [syncInfo, setSyncInfo]     = useState(null);
+  const [syncing, setSyncing]       = useState(false);
+  const [page, setPage]             = useState(() => localStorage.getItem('sefer_last_page') || 'reader');
+  const [pageKey, setPageKey]       = useState(0);
+  const [readerTarget, setReaderTarget] = useState(null);
+  const [themeId, setThemeId]       = useState(() => localStorage.getItem('sefer_theme') || DEFAULT_THEME_ID);
+  const [showDailyVerse, setShowDailyVerse] = useState(() => !wasDailyVerseShownToday());
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem('sefer_onboarded'));
+  const [translation, setTranslation]       = useState(() => localStorage.getItem('sefer_translation') || 'nkjv');
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    initStorage().finally(() => setReady(true));
+    window.seferAPI?.syncStatus?.().then(setSyncInfo).catch(() => {});
+  }, []);
+
   useEffect(() => {
     applyTheme(themeId);
     localStorage.setItem('sefer_theme', themeId);
   }, [themeId]);
 
-  const tileText = 'var(--tile-text, #fff8e8)';
-  const tileMuted = 'var(--tile-muted, rgba(255,230,170,0.55))';
+  useEffect(() => {
+    localStorage.setItem('sefer_translation', translation);
+  }, [translation]);
+
+  useEffect(() => {
+    const fn = () => { if (window.innerWidth >= 768) setMobileOpen(false); };
+    window.addEventListener('resize', fn);
+    return () => window.removeEventListener('resize', fn);
+  }, []);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileOpen]);
+
+  function switchPage(id) {
+    setPage(id);
+    setPageKey((k) => k + 1);
+    setMobileOpen(false);
+    localStorage.setItem('sefer_last_page', id);
+  }
+
+  function navigateToReader(refStr) {
+    setReaderTarget(refStr);
+    setPage('reader');
+    setPageKey((k) => k + 1);
+    setMobileOpen(false);
+    localStorage.setItem('sefer_last_page', 'reader');
+  }
+
+  async function handleManualSync() {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      await forceSyncNow();
+      const info = await window.seferAPI?.syncStatus?.();
+      if (info) setSyncInfo(info);
+    } catch { /* silent */ } finally {
+      setSyncing(false);
+    }
+  }
+
+  const translationObj = TRANSLATIONS.find((t) => t.id === translation);
+
+  if (!ready) return (
+    <div className="sefer-bg" style={{ height: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--accent, #8E6B28)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   return (
-    <div className="sefer-bg">
-      {showDailyVerse && (
-        <DailyVerseModal
-          verse={getTodaysVerse()}
-          onClose={() => setShowDailyVerse(false)}
-        />
+    <div className="sefer-bg" style={{ height: '100dvh', overflow: 'hidden' }}>
+      {showOnboarding && (
+        <OnboardingModal onClose={() => setShowOnboarding(false)} />
       )}
-      <div className="relative z-10">
-        {/* ── Header ───────────────────────────────────── */}
-        <header className="glass sticky top-0 z-40">
-          <div className="max-w-5xl mx-auto px-5 py-3 flex items-center">
-            {/* Logo + name */}
-            <div className="flex items-center gap-3 flex-1">
+      {!showOnboarding && showDailyVerse && (
+        <DailyVerseModal verse={getTodaysVerse()} onClose={() => setShowDailyVerse(false)} />
+      )}
+
+      {/* ── Floating Nav ──────────────────────────────────── */}
+      <div className="fixed top-4 left-0 right-0 z-40 px-4 flex justify-center pointer-events-none">
+        <nav className="sefer-nav pointer-events-auto w-full max-w-3xl">
+
+          {/* Logo + wordmark */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="sefer-nav-logo">
               <img
-                src="/my logo.png"
-                alt="Sefer logo"
-                style={{ width: 40, height: 40, objectFit: 'contain', filter: 'drop-shadow(0 1px 4px rgba(0,0,0,0.18))' }}
+                src={seferLogo}
+                alt="Sefer"
+                style={{ width: 22, height: 22, objectFit: 'contain', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.14))' }}
               />
-              <div>
-                <h1 style={{ color: tileText, fontFamily: 'Georgia, serif' }}
-                    className="font-bold text-lg leading-tight tracking-wide">
-                  Sefer
-                </h1>
-                <p style={{ color: tileMuted }} className="text-xs">
-                  {(() => { const t = TRANSLATIONS.find(t => t.id === translation); return `${t.label} · ${t.name}`; })()}
-                </p>
-              </div>
             </div>
+            <span className="sefer-wordmark hidden lg:inline">Sefer</span>
+          </div>
 
-            {/* Nav — centered */}
-            <nav
-              className="flex gap-1 p-1 rounded-full"
-              style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid var(--header-bd, rgba(185,140,40,0.14))' }}
-            >
-              {[
-                { id: 'reader', label: 'Bible' },
-                { id: 'notes',  label: 'My Notes' },
-                { id: 'prayer', label: '🙏 Prayer' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setPage(tab.id)}
-                  className="px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
-                  style={
-                    page === tab.id
-                      ? { background: '#ffffff', color: 'var(--accent, #a86e10)', boxShadow: '0 1px 6px rgba(0,0,0,0.10)' }
-                      : { color: tileText }
-                  }
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* Daily verse + Theme — extreme right */}
-            <div className="flex-1 flex justify-end items-center gap-2">
+          {/* Desktop tabs */}
+          <div className="hidden md:flex items-center gap-0.5 sefer-tab-group">
+            {TABS.map((tab) => (
               <button
-                onClick={() => setShowDailyVerse(true)}
-                title="Today's verse"
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
-                style={{
-                  background: 'rgba(255,255,255,0.10)',
-                  border: '1px solid var(--header-bd, rgba(185,140,40,0.18))',
-                  color: tileText,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; }}
+                key={tab.id}
+                onClick={() => switchPage(tab.id)}
+                className={`sefer-tab ${page === tab.id ? 'sefer-tab-active' : ''}`}
               >
-                ✦ Daily verse
+                {tab.label}
               </button>
+            ))}
+          </div>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {/* Translation label (desktop) */}
+            {translationObj && (
+              <span
+                className="hidden lg:flex items-center sefer-eyebrow"
+                style={{ fontSize: '0.58rem' }}
+              >
+                {translationObj.label}
+              </span>
+            )}
+
+            <button
+              onClick={() => setShowDailyVerse(true)}
+              className="sefer-action-btn hidden sm:flex"
+              title="Today's verse"
+            >
+              ✦ Daily
+            </button>
+
+            {syncInfo?.icloudAvailable && (
+              <button
+                className="hidden sm:flex items-center gap-1"
+                onClick={handleManualSync}
+                disabled={syncing}
+                style={{
+                  position: 'relative',
+                  padding: '3px 9px 3px 7px',
+                  borderRadius: 9999,
+                  fontSize: '0.68rem',
+                  fontWeight: 600,
+                  fontFamily: "'DM Sans', sans-serif",
+                  letterSpacing: '0.01em',
+                  cursor: syncing ? 'default' : 'pointer',
+                  userSelect: 'none',
+                  background: syncInfo.icloudSynced
+                    ? 'rgba(var(--accent-rgb, 168,110,16), 0.12)'
+                    : 'rgba(255,255,255,0.07)',
+                  border: `1px solid ${syncInfo.icloudSynced ? 'var(--accent)' : 'rgba(255,255,255,0.18)'}`,
+                  color: syncInfo.icloudSynced ? 'var(--accent)' : 'rgba(255,255,255,0.55)',
+                  outline: 'none',
+                  opacity: syncing ? 0.7 : 1,
+                }}
+                onMouseEnter={(e) => { const t = e.currentTarget.querySelector('.sync-tooltip'); if (t) t.style.opacity = '1'; }}
+                onMouseLeave={(e) => { const t = e.currentTarget.querySelector('.sync-tooltip'); if (t) t.style.opacity = '0'; }}
+              >
+                <span style={{ fontSize: 13 }}>☁</span>
+                {syncing ? 'Syncing…' : syncInfo.icloudSynced ? 'Synced' : 'Pending'}
+                <span
+                  className="sync-tooltip"
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(20,14,6,0.92)',
+                    color: 'rgba(255,240,210,0.95)',
+                    fontSize: '0.65rem', fontWeight: 500,
+                    fontFamily: "'DM Sans', sans-serif",
+                    padding: '5px 10px', borderRadius: 7,
+                    whiteSpace: 'nowrap', pointerEvents: 'none',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+                    border: '1px solid rgba(255,255,255,0.10)',
+                    opacity: 0, transition: 'opacity 0.15s',
+                    zIndex: 9999,
+                  }}
+                >
+                  {syncing
+                    ? 'Syncing now…'
+                    : syncInfo.lastSyncTime
+                      ? `Last synced: ${new Date(syncInfo.lastSyncTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
+                      : 'Click to sync'}
+                </span>
+              </button>
+            )}
+
+            <div className="hidden md:block">
               <ThemeSelector currentThemeId={themeId} onSelect={setThemeId} />
             </div>
-          </div>
-        </header>
 
-        {/* ── Main ─────────────────────────────────────── */}
-        <main className={`mx-auto px-4 py-6 ${page === 'prayer' || page === 'notes' ? 'max-w-5xl' : 'max-w-3xl'}`}>
-          {page === 'reader' ? <BibleReader translation={translation} onTranslationChange={setTranslation} /> : page === 'notes' ? <NotesPage /> : <PrayerPage />}
+            {/* Hamburger */}
+            <button
+              onClick={() => setMobileOpen((o) => !o)}
+              className="sefer-hamburger md:hidden"
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            >
+              <span className={`sefer-bar ${mobileOpen ? 'rotate-45 translate-y-[6.5px]' : ''}`} />
+              <span className={`sefer-bar transition-all duration-300 ${mobileOpen ? 'opacity-0 scale-x-0' : ''}`} />
+              <span className={`sefer-bar ${mobileOpen ? '-rotate-45 -translate-y-[6.5px]' : ''}`} />
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      {/* ── Mobile Overlay ────────────────────────────────── */}
+      <div className={`sefer-mobile-overlay ${mobileOpen ? 'sefer-mobile-overlay-open' : ''}`}>
+        <div className="flex flex-col items-center justify-center h-full gap-8 px-8">
+          {TABS.map((tab, i) => (
+            <button
+              key={tab.id}
+              onClick={() => switchPage(tab.id)}
+              className={`sefer-mobile-link ${mobileOpen ? 'sefer-mobile-link-in' : ''}`}
+              style={{
+                transitionDelay: mobileOpen ? `${i * 75 + 80}ms` : '0ms',
+                color: page === tab.id ? 'var(--accent, #a86e10)' : 'var(--tile-text, #3a2008)',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+
+          <div
+            className={`flex flex-col items-center gap-3 mt-2 ${mobileOpen ? 'sefer-mobile-link-in' : ''}`}
+            style={{ transitionDelay: mobileOpen ? '320ms' : '0ms' }}
+          >
+            <button
+              onClick={() => { setShowDailyVerse(true); setMobileOpen(false); }}
+              className="sefer-action-btn"
+            >
+              ✦ Today's Verse
+            </button>
+            <ThemeSelector
+              currentThemeId={themeId}
+              onSelect={(id) => { setThemeId(id); }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main Content ──────────────────────────────────── */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          zIndex: 1,
+          paddingTop: '5rem',
+          paddingBottom: '1.5rem',
+        }}
+        className="no-scrollbar"
+      >
+        <main
+          key={pageKey}
+          className={`sefer-page mx-auto px-4 ${
+            page === 'prayer' ? 'max-w-5xl' : page === 'rhema' ? 'max-w-full' : 'max-w-3xl'
+          }`}
+        >
+          {page === 'reader' ? (
+            <BibleReader translation={translation} onTranslationChange={setTranslation} initialRef={readerTarget} />
+          ) : page === 'prayer' ? (
+            <PrayerPage onReadInBible={navigateToReader} />
+          ) : (
+            <RhemaPage themeId={themeId} />
+          )}
         </main>
       </div>
     </div>

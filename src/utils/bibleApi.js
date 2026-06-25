@@ -1,7 +1,35 @@
-// No API key required — uses bible-api.com (public domain KJV)
-// Chapters are cached to localStorage so previously read content works offline
-const API_BASE = 'https://bible-api.com';
+import bibleKjv   from '../data/bible-kjv.json';
+import bibleAsv   from '../data/bible-asv.json';
+import bibleYlt   from '../data/bible-ylt.json';
+import bibleDarby from '../data/bible-darby.json';
+import bibleBbe   from '../data/bible-bbe.json';
 import { getCachedChapter, setCachedChapter } from './chapterCache';
+
+// Local bundled datasets — fully offline, no internet needed
+const LOCAL_BIBLES = { kjv: bibleKjv, asv: bibleAsv, ylt: bibleYlt, darby: bibleDarby, bbe: bibleBbe };
+
+const API_BASE = 'https://bible-api.com';
+const API_BIBLE_BASE = 'https://api.scripture.api.bible/v1';
+const API_BIBLE_KEY = import.meta.env.VITE_BIBLE_API_KEY;
+const NKJV_BIBLE_ID = '63097d2a0a2f7db3-01';
+
+// Maps app book IDs → api.bible 3-letter codes
+const API_BIBLE_BOOK_CODE = {
+  genesis:'GEN', exodus:'EXO', leviticus:'LEV', numbers:'NUM', deuteronomy:'DEU',
+  joshua:'JOS', judges:'JDG', ruth:'RUT', '1samuel':'1SA', '2samuel':'2SA',
+  '1kings':'1KI', '2kings':'2KI', '1chronicles':'1CH', '2chronicles':'2CH',
+  ezra:'EZR', nehemiah:'NEH', esther:'EST', job:'JOB', psalms:'PSA',
+  proverbs:'PRO', ecclesiastes:'ECC', songofsolomon:'SNG', isaiah:'ISA',
+  jeremiah:'JER', lamentations:'LAM', ezekiel:'EZK', daniel:'DAN', hosea:'HOS',
+  joel:'JOL', amos:'AMO', obadiah:'OBA', jonah:'JON', micah:'MIC', nahum:'NAM',
+  habakkuk:'HAB', zephaniah:'ZEP', haggai:'HAG', zechariah:'ZEC', malachi:'MAL',
+  matthew:'MAT', mark:'MRK', luke:'LUK', john:'JHN', acts:'ACT', romans:'ROM',
+  '1corinthians':'1CO', '2corinthians':'2CO', galatians:'GAL', ephesians:'EPH',
+  philippians:'PHP', colossians:'COL', '1thessalonians':'1TH', '2thessalonians':'2TH',
+  '1timothy':'1TI', '2timothy':'2TI', titus:'TIT', philemon:'PHM', hebrews:'HEB',
+  james:'JAS', '1peter':'1PE', '2peter':'2PE', '1john':'1JN', '2john':'2JN',
+  '3john':'3JN', jude:'JUD', revelation:'REV',
+};
 
 export const BOOKS = [
   // Old Testament
@@ -89,12 +117,102 @@ export async function getChapters(bookId) {
 
 export const TRANSLATIONS = [
   { id: 'kjv',   label: 'KJV',   name: 'King James Version',         year: '1611' },
-  { id: 'web',   label: 'WEB',   name: 'World English Bible',         year: '2000' },
+  { id: 'nkjv',  label: 'NKJV',  name: 'New King James Version',     year: '1982', requiresNet: true },
   { id: 'asv',   label: 'ASV',   name: 'American Standard Version',   year: '1901' },
   { id: 'ylt',   label: 'YLT',   name: "Young's Literal Translation", year: '1898', ntOnly: true },
   { id: 'bbe',   label: 'BBE',   name: 'Bible in Basic English',      year: '1965' },
   { id: 'darby', label: 'Darby', name: 'Darby Translation',           year: '1890' },
+  { id: 'web',   label: 'WEB',   name: 'World English Bible',         year: '2000', requiresNet: true },
 ];
+
+function getLocalChapter(chapterId, translation) {
+  const bibleData = LOCAL_BIBLES[translation];
+  if (!bibleData) return null;
+
+  const dotIndex = chapterId.lastIndexOf('.');
+  const bookId = chapterId.slice(0, dotIndex);
+  const chapterNum = parseInt(chapterId.slice(dotIndex + 1));
+  const bookIndex = BOOKS.findIndex((b) => b.id === bookId);
+  if (bookIndex === -1) return null;
+
+  const bookData = bibleData[bookIndex];
+  const verseTexts = bookData?.chapters?.[chapterNum - 1];
+  if (!verseTexts) return null;
+
+  const book = BOOKS[bookIndex];
+  return {
+    reference: `${book.name} ${chapterNum}`,
+    bookId,
+    bookName: book.name,
+    chapter: chapterNum,
+    verses: verseTexts.map((text, i) => ({
+      book_id: bookId,
+      book_name: book.name,
+      chapter: chapterNum,
+      verse: i + 1,
+      text,
+    })),
+    translation,
+  };
+}
+
+async function getNkjvChapterContent(chapterId) {
+  const dotIndex = chapterId.lastIndexOf('.');
+  const bookId = chapterId.slice(0, dotIndex);
+  const chapterNum = parseInt(chapterId.slice(dotIndex + 1));
+  const book = BOOKS.find((b) => b.id === bookId);
+  if (!book) throw new Error(`Unknown book: ${bookId}`);
+
+  const code = API_BIBLE_BOOK_CODE[bookId];
+  if (!code) throw new Error(`No api.bible code for: ${bookId}`);
+
+  const url = `${API_BIBLE_BASE}/bibles/${NKJV_BIBLE_ID}/chapters/${code}.${chapterNum}?content-type=text&include-verse-numbers=true&include-titles=false`;
+  const res = await fetch(url, { headers: { 'api-key': API_BIBLE_KEY } });
+  if (!res.ok) throw new Error(`NKJV fetch failed (HTTP ${res.status})`);
+  const data = await res.json();
+
+  // Parse "[1] verse text [2] verse text ..." format
+  const parts = data.data.content.split(/\[(\d+)\]/);
+  const verses = [];
+  for (let i = 1; i < parts.length; i += 2) {
+    const text = parts[i + 1]?.trim();
+    if (text) {
+      verses.push({
+        book_id: bookId,
+        book_name: book.name,
+        chapter: chapterNum,
+        verse: parseInt(parts[i]),
+        text,
+      });
+    }
+  }
+
+  return {
+    reference: `${book.name} ${chapterNum}`,
+    bookId,
+    bookName: book.name,
+    chapter: chapterNum,
+    verses,
+    translation: 'nkjv',
+  };
+}
+
+export async function getNkjvPassage(bookId, chapter, verse, verseEnd) {
+  const code = API_BIBLE_BOOK_CODE[bookId];
+  if (!code) throw new Error(`No api.bible code for: ${bookId}`);
+
+  const start = `${code}.${chapter}.${verse}`;
+  const passageId = verseEnd ? `${start}-${code}.${chapter}.${verseEnd}` : start;
+
+  const url = `${API_BIBLE_BASE}/bibles/${NKJV_BIBLE_ID}/passages/${passageId}?content-type=text&include-verse-numbers=true&include-titles=false`;
+  const res = await fetch(url, { headers: { 'api-key': API_BIBLE_KEY } });
+  if (!res.ok) throw new Error(`NKJV fetch failed (HTTP ${res.status})`);
+  const json = await res.json();
+
+  const content = json.data.content.trim();
+  // Single verse: strip the leading [n] marker; ranges keep it for renderVerseText
+  return verseEnd ? content : content.replace(/^\[\d+\]\s*/, '');
+}
 
 export async function getChapterContent(chapterId, translation = 'kjv') {
   // chapterId format: "genesis.1"
@@ -104,7 +222,21 @@ export async function getChapterContent(chapterId, translation = 'kjv') {
   const book = BOOKS.find((b) => b.id === bookId);
   if (!book) throw new Error(`Unknown book: ${bookId}`);
 
-  // Return from cache if available (works offline)
+  // Bundled translations — fully offline
+  if (LOCAL_BIBLES[translation]) {
+    return getLocalChapter(chapterId, translation);
+  }
+
+  // NKJV via api.bible (cached after first read)
+  if (translation === 'nkjv') {
+    const cached = getCachedChapter(chapterId, 'nkjv');
+    if (cached) return cached;
+    const result = await getNkjvChapterContent(chapterId);
+    setCachedChapter(chapterId, result, 'nkjv');
+    return result;
+  }
+
+  // WEB and any other translations: cache first, then fetch
   const cached = getCachedChapter(chapterId, translation);
   if (cached) return cached;
 
@@ -125,4 +257,58 @@ export async function getChapterContent(chapterId, translation = 'kjv') {
 
   setCachedChapter(chapterId, result, translation);
   return result;
+}
+
+// ── Full-text Bible search (searches bundled KJV) ─────
+const SEARCH_STOPWORDS = new Set([
+  'a','an','the','and','or','but','in','on','at','to','for','of','with','by','from',
+  'is','are','was','were','be','been','being','have','has','had','do','does','did',
+  'will','would','could','should','may','might','shall','must','i','me','my','we',
+  'our','you','your','he','him','his','she','her','it','its','they','them','their',
+  'this','that','these','those','not','no','so','if','as','all','am','unto','thee',
+  'thou','thy','thine','ye','hath','doth','shall','who','whom','which','what','there',
+]);
+
+export function searchBible(query, maxResults = 25) {
+  const tokens = query.toLowerCase()
+    .replace(/[^a-z\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !SEARCH_STOPWORDS.has(w));
+
+  if (tokens.length === 0) return [];
+
+  const results = [];
+
+  for (let bi = 0; bi < bibleKjv.length; bi++) {
+    const book = BOOKS[bi];
+    if (!book) continue;
+    const chapters = bibleKjv[bi]?.chapters || [];
+    for (let ci = 0; ci < chapters.length; ci++) {
+      const verses = chapters[ci];
+      for (let vi = 0; vi < verses.length; vi++) {
+        // Strip KJV editorial notes in curly braces
+        const raw = verses[vi] || '';
+        const clean = raw.replace(/\{[^}]*\}/g, '').toLowerCase();
+        let matchCount = 0;
+        for (const token of tokens) {
+          if (clean.includes(token)) matchCount++;
+        }
+        if (matchCount === 0) continue;
+        const score = matchCount / tokens.length;
+        results.push({
+          score,
+          matchCount,
+          ref: `${book.name} ${ci + 1}:${vi + 1}`,
+          text: raw.replace(/\{[^}]*\}/g, '').trim(),
+          bookId: book.id,
+          chapter: ci + 1,
+          verse: vi + 1,
+        });
+      }
+    }
+  }
+
+  // Sort: full matches first, then partial; within each tier, canonical order
+  results.sort((a, b) => b.score - a.score || b.matchCount - a.matchCount);
+  return results.slice(0, maxResults);
 }

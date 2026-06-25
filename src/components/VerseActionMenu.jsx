@@ -17,7 +17,7 @@ const T = {
   divider: 'rgba(160,120,50,0.15)',
 };
 
-export default function VerseActionMenu({ verseRef, verseId, position, currentHighlight, onHighlight, onRemoveHighlight, onNote, onTranslations, onClose }) {
+export default function VerseActionMenu({ verseRef, verseId, position, currentHighlight, onHighlight, onRemoveHighlight, onNote, onTranslations, onCrossRefs, onClose }) {
   const menuRef  = useRef(null);
   const menuWidth = 215;
 
@@ -82,6 +82,17 @@ export default function VerseActionMenu({ verseRef, verseId, position, currentHi
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.textSub; }}
         >
           <span style={{ fontSize: 13 }}>✏️</span> Write note
+        </button>
+
+        {/* Cross-references */}
+        <button
+          onClick={() => { onCrossRefs?.(); onClose(); }}
+          className="w-full text-left text-sm px-2 py-1.5 rounded-lg transition-all flex items-center gap-2"
+          style={{ color: T.textSub }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(6,95,70,0.07)'; e.currentTarget.style.color = '#065f46'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.textSub; }}
+        >
+          <span style={{ fontSize: 13 }}>🔗</span> Cross-references
         </button>
 
         {/* Other translations */}

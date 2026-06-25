@@ -140,7 +140,7 @@ export default function ThemeSelector({ currentThemeId, onSelect }) {
                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
                       <span style={{
                         fontSize: 11,
-                        color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.60)',
+                        color: isActive ? '#ffffff' : 'rgba(255,255,255,0.75)',
                         fontWeight: isActive ? 700 : 500,
                         fontFamily: 'system-ui, sans-serif',
                       }}>
@@ -149,7 +149,7 @@ export default function ThemeSelector({ currentThemeId, onSelect }) {
                       {theme.verse && (
                         <span style={{
                           fontSize: 9, fontWeight: 600,
-                          color: isActive ? `${theme.swatch}ee` : 'rgba(255,255,255,0.55)',
+                          color: isActive ? 'rgba(255,255,255,0.82)' : 'rgba(255,255,255,0.50)',
                           fontFamily: 'system-ui, sans-serif',
                           letterSpacing: '0.02em',
                         }}>
@@ -161,8 +161,8 @@ export default function ThemeSelector({ currentThemeId, onSelect }) {
                       <span style={{
                         display: 'block',
                         fontSize: 9.5,
-                        color: isActive ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.45)',
-                        fontFamily: 'Georgia, serif',
+                        color: isActive ? 'rgba(255,255,255,0.80)' : 'rgba(255,255,255,0.48)',
+                        fontFamily: "Lora, Georgia, serif",
                         fontStyle: 'italic',
                         lineHeight: 1.45,
                         marginTop: 2,

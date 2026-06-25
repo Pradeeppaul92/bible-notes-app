@@ -1,31 +1,59 @@
 {
-  "name": "bible-notes-app",
+  "name": "sefer",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "electron": "cross-env NODE_ENV=development electron .",
+    "electron:dev": "concurrently -k \"vite\" \"cross-env NODE_ENV=development electron .\"",
+    "build": "cross-env ELECTRON=true vite build",
+    "electron:build": "cross-env ELECTRON=true vite build && electron-builder && rm -rf ~/Desktop/Sefer.app && ditto release/mac-arm64/Sefer.app ~/Desktop/Sefer.app",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tiptap/extension-color": "^3.26.0",
+    "@tiptap/extension-font-family": "^3.26.0",
+    "@tiptap/extension-text-style": "^3.26.0",
+    "@tiptap/extension-underline": "^3.26.0",
+    "@tiptap/react": "^3.26.0",
+    "@tiptap/starter-kit": "^3.26.0",
+    "docx": "^9.7.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.2"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^42.3.3",
+    "electron-builder": "^26.8.1",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.5.0",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.19",
     "vite": "^8.0.10"
+  },
+  "build": {
+    "appId": "com.sefer.app",
+    "productName": "Sefer",
+    "asar": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "icon": "build/icon.icns",
+    "mac": {
+      "category": "public.app-category.reference",
+      "icon": "build/icon.icns"
+    }
   }
 }

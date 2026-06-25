@@ -39,10 +39,16 @@ export default function DailyVerseModal({ verse, onClose }) {
           {/* Date + label */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-0.5"
-                style={{ color: 'var(--accent)', letterSpacing: '0.12em' }}>
-                Verse of the Day
-              </p>
+              <div className="flex items-center gap-2 mb-0.5">
+                <p className="text-xs font-bold uppercase tracking-widest"
+                  style={{ color: 'var(--accent)', letterSpacing: '0.12em' }}>
+                  Verse of the Day
+                </p>
+                <span className="text-xs font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: 'var(--accent-light)', color: 'var(--accent)', border: '1px solid var(--glass-tile-bd)', fontSize: '0.6rem', letterSpacing: '0.06em' }}>
+                  NKJV
+                </span>
+              </div>
               <p className="text-xs" style={{ color: 'var(--tile-muted)' }}>{day}</p>
             </div>
             <button
@@ -58,7 +64,7 @@ export default function DailyVerseModal({ verse, onClose }) {
           <div className="mb-6">
             <p
               className="text-lg leading-relaxed italic"
-              style={{ color: 'var(--tile-text)', fontFamily: 'Georgia, serif', lineHeight: 1.8 }}
+              style={{ color: 'var(--tile-text)', fontFamily: "Lora, Georgia, serif", lineHeight: 1.8 }}
             >
               "{verse.text}"
             </p>
@@ -69,7 +75,7 @@ export default function DailyVerseModal({ verse, onClose }) {
             <div style={{ flex: 1, height: 1, background: 'var(--tile-divider)' }} />
             <p
               className="text-sm font-bold"
-              style={{ color: 'var(--accent)', fontFamily: 'Georgia, serif' }}
+              style={{ color: 'var(--accent)', fontFamily: "Lora, Georgia, serif" }}
             >
               — {verse.ref}
             </p>
