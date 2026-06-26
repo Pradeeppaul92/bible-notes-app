@@ -925,25 +925,41 @@ export default function PrayerPage({ onReadInBible }) {
           </div>
           {!editing && (
             <div className="flex items-center gap-2">
-              {/* Unlock all — only shown when at least one locked block exists */}
-              {blocks.some(b => b.pinHash && !unlockedIds.has(b.id)) && (
-                <button
-                  onClick={() => setShowUnlockAll(true)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    fontSize: 13, fontWeight: 600, padding: '8px 16px',
-                    borderRadius: 12, color: 'var(--accent)',
-                    background: 'rgba(var(--accent-rgb,109,40,217),0.09)',
-                    border: '1px solid rgba(var(--accent-rgb,109,40,217),0.22)',
-                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                    transition: 'opacity 0.15s, transform 0.15s',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
-                >
-                  🔓 Unlock all
-                </button>
-              )}
+              {/* Unlock all / Lock all toggle — only shown when PIN-protected blocks exist */}
+              {(() => {
+                const pinBlocks = blocks.filter(b => b.pinHash);
+                if (pinBlocks.length === 0) return null;
+                const allUnlocked = pinBlocks.every(b => unlockedIds.has(b.id));
+                return (
+                  <button
+                    onClick={() => {
+                      if (allUnlocked) {
+                        // Lock all: remove all PIN block IDs from unlockedIds
+                        setUnlockedIds(s => {
+                          const n = new Set(s);
+                          pinBlocks.forEach(b => n.delete(b.id));
+                          return n;
+                        });
+                      } else {
+                        setShowUnlockAll(true);
+                      }
+                    }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      fontSize: 13, fontWeight: 600, padding: '8px 16px',
+                      borderRadius: 12, color: 'var(--accent)',
+                      background: 'rgba(var(--accent-rgb,109,40,217),0.09)',
+                      border: '1px solid rgba(var(--accent-rgb,109,40,217),0.22)',
+                      cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                      transition: 'opacity 0.15s, transform 0.15s',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
+                  >
+                    {allUnlocked ? '🔒 Lock all' : '🔓 Unlock all'}
+                  </button>
+                );
+              })()}
               <button
                 onClick={() => setEditing('new')}
                 style={{
