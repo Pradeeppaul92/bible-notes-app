@@ -33,7 +33,7 @@ async function hashPin(pin) {
 }
 
 // ── PIN modal (unlock) ─────────────────────────────────
-function PinModal({ title, onVerify, onCancel, pinHash }) {
+function PinModal({ title, onVerify, onCancel, pinHash, customVerify }) {
   const [digits, setDigits] = useState([]);
   const [error, setError]   = useState('');
   const [busy, setBusy]     = useState(false);
@@ -55,13 +55,15 @@ function PinModal({ title, onVerify, onCancel, pinHash }) {
     setDigits(next);
     if (next.length === 6) {
       setBusy(true);
-      const hash = await hashPin(next.join(''));
-      if (hash === pinHash) {
-        onVerify();
+      const pin = next.join('');
+      if (customVerify) {
+        const ok = await customVerify(pin);
+        if (ok) { onVerify(); }
+        else { setError('Incorrect PIN. Try again.'); setDigits([]); setBusy(false); }
       } else {
-        setError('Incorrect PIN. Try again.');
-        setDigits([]);
-        setBusy(false);
+        const hash = await hashPin(pin);
+        if (hash === pinHash) { onVerify(); }
+        else { setError('Incorrect PIN. Try again.'); setDigits([]); setBusy(false); }
       }
     }
   }
@@ -854,6 +856,7 @@ export default function PrayerPage({ onReadInBible }) {
   const [editing, setEditing]         = useState(null);
   const [query, setQuery]             = useState('');
   const [unlockedIds, setUnlockedIds] = useState(new Set());
+  const [showUnlockAll, setShowUnlockAll] = useState(false);
 
   function refresh() {
     setBlocks(getPrayerBlocks());
@@ -921,22 +924,43 @@ export default function PrayerPage({ onReadInBible }) {
             </h2>
           </div>
           {!editing && (
-            <button
-              onClick={() => setEditing('new')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 13, fontWeight: 600, padding: '8px 18px',
-                borderRadius: 12, color: '#fff', background: 'var(--accent)',
-                border: 'none', cursor: 'pointer',
-                fontFamily: "'DM Sans', sans-serif",
-                boxShadow: '0 2px 14px rgba(0,0,0,0.16)',
-                transition: 'opacity 0.15s, transform 0.15s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
-            >
-              <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New Prayer
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Unlock all — only shown when at least one locked block exists */}
+              {blocks.some(b => b.pinHash && !unlockedIds.has(b.id)) && (
+                <button
+                  onClick={() => setShowUnlockAll(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    fontSize: 13, fontWeight: 600, padding: '8px 16px',
+                    borderRadius: 12, color: 'var(--accent)',
+                    background: 'rgba(var(--accent-rgb,109,40,217),0.09)',
+                    border: '1px solid rgba(var(--accent-rgb,109,40,217),0.22)',
+                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                    transition: 'opacity 0.15s, transform 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  🔓 Unlock all
+                </button>
+              )}
+              <button
+                onClick={() => setEditing('new')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  fontSize: 13, fontWeight: 600, padding: '8px 18px',
+                  borderRadius: 12, color: '#fff', background: 'var(--accent)',
+                  border: 'none', cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif",
+                  boxShadow: '0 2px 14px rgba(0,0,0,0.16)',
+                  transition: 'opacity 0.15s, transform 0.15s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'none'; }}
+              >
+                <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> New Prayer
+              </button>
+            </div>
           )}
         </div>
 
@@ -1024,6 +1048,22 @@ export default function PrayerPage({ onReadInBible }) {
       <div className="shrink-0" style={{ width: 300 }}>
         <ProclamationsPanel proclamations={proclamations} onRefresh={refresh} onReadInBible={onReadInBible} />
       </div>
+
+      {showUnlockAll && (
+        <PinModal
+          title="Unlock all prayer points"
+          onCancel={() => setShowUnlockAll(false)}
+          customVerify={async (pin) => {
+            const hash = await hashPin(pin);
+            const lockedBlocks = blocks.filter(b => b.pinHash && !unlockedIds.has(b.id));
+            const matching = lockedBlocks.filter(b => b.pinHash === hash);
+            if (matching.length === 0) return false;
+            setUnlockedIds(s => new Set([...s, ...matching.map(b => b.id)]));
+            return true;
+          }}
+          onVerify={() => setShowUnlockAll(false)}
+        />
+      )}
 
       <style>{`
         .prayer-editor-body[data-placeholder]:empty:before {
