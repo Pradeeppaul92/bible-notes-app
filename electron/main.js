@@ -18,6 +18,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      spellcheck: true,
     },
   });
 
@@ -26,6 +27,10 @@ function createWindow() {
   } else {
     win.loadFile(path.join(app.getAppPath(), 'dist/index.html'));
   }
+
+  // Enable Chromium's built-in spell checker so context-menu gets misspelledWord
+  win.webContents.session.setSpellCheckerEnabled(true);
+  win.webContents.session.setSpellCheckerLanguages(['en-US', 'en-GB']);
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);

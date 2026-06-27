@@ -61,6 +61,7 @@ export default function RichTextEditor({ content, onChange, onCursorChange, plac
     onUpdate: ({ editor: ed }) => onChange(ed.getHTML()),
     editorProps: {
       attributes: {
+        spellcheck: 'true',
         style: `min-height:${minHeight}px; outline:none; padding: 12px 14px; font-family: Lora, Georgia, serif; font-size: 15px; line-height: 1.85; color: var(--tile-text);`,
       },
     },
