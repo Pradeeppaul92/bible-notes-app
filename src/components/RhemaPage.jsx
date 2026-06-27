@@ -876,7 +876,7 @@ export default function RhemaPage({ themeId }) {
           onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(168,110,16,0.38)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 3px 12px rgba(168,110,16,0.28)'; e.currentTarget.style.transform = ''; }}
         >
-          <span>+ New Word</span>
+          <span>+ New Inscription</span>
           <span
             className="flex items-center justify-center w-7 h-7 rounded-full transition-all duration-300 group-hover:translate-x-0.5"
             style={{ background: 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}
@@ -975,7 +975,7 @@ export default function RhemaPage({ themeId }) {
               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(168,110,16,0.38)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 3px 12px rgba(168,110,16,0.28)'; e.currentTarget.style.transform = ''; }}
             >
-              Record your first word
+              Record your first inscription
               <span className="flex items-center justify-center w-7 h-7 rounded-full"
                 style={{ background: 'rgba(255,255,255,0.2)', fontSize: '0.9rem' }}>→</span>
             </button>
