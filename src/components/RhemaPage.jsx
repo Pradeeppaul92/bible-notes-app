@@ -461,11 +461,13 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
   const canSave = title.trim().length > 0 || body.trim().length > 0;
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-14"
       style={{ background: 'rgba(0,0,0,0.30)' }}
       onClick={(e) => { if (e.target === e.currentTarget) attemptClose(); }}>
       <div className="glass-modal w-full max-w-2xl flex flex-col" style={{
         maxHeight: '90vh',
+        position: 'relative',
         borderColor: pal?.border || undefined,
         transition: 'border-color 0.3s',
       }}>
@@ -669,40 +671,47 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
           </div>
         </div>
 
-        {/* Leave / draft prompt */}
-        {showLeavePrompt && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-[1.5rem]"
-            style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', zIndex: 10 }}>
-            <div className="mx-6 rounded-2xl p-6 text-center"
-              style={{ background: 'var(--glass-content-bg)', border: '1px solid var(--glass-content-bd)', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
-              <p className="text-base font-semibold mb-1" style={{ color: 'var(--tile-text)', fontFamily: "Lora, Georgia, serif" }}>
-                Save your work?
-              </p>
-              <p className="text-xs mb-5" style={{ color: 'var(--tile-muted)', fontFamily: "'DM Sans', sans-serif" }}>
-                You have unsaved content. Save it as a draft to come back to it later.
-              </p>
-              <div className="flex gap-3 justify-center">
-                <button onClick={discard}
-                  className="text-sm px-4 py-2 rounded-xl transition-all hover:opacity-80"
-                  style={{ color: '#b91c1c', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.18)', fontFamily: "'DM Sans', sans-serif" }}>
-                  Discard
-                </button>
-                <button onClick={() => setShowLeavePrompt(false)}
-                  className="text-sm px-4 py-2 rounded-xl transition-all hover:opacity-80"
-                  style={{ color: 'var(--tile-sub)', background: 'var(--glass-tile-bg)', border: '1px solid var(--glass-tile-bd)', fontFamily: "'DM Sans', sans-serif" }}>
-                  Keep editing
-                </button>
-                <button onClick={saveAsDraft}
-                  className="text-sm px-5 py-2 rounded-xl font-semibold transition-all hover:opacity-90"
-                  style={{ background: pal?.dot || 'var(--accent)', color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
-                  Save as draft
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
+
+    {/* Leave / draft prompt — separate portal so z-index is never clipped */}
+    {showLeavePrompt && createPortal(
+      <div className="fixed inset-0 flex items-center justify-center"
+        style={{ zIndex: 9999, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}>
+        <div className="rounded-2xl p-6 text-center mx-6" style={{
+          background: 'var(--glass-content-bg)',
+          border: '1px solid var(--glass-content-bd)',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
+          maxWidth: 360,
+        }}>
+          <p className="text-base font-semibold mb-1" style={{ color: 'var(--tile-text)', fontFamily: "Lora, Georgia, serif" }}>
+            Save your work?
+          </p>
+          <p className="text-xs mb-5" style={{ color: 'var(--tile-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+            You have unsaved content. Save it as a draft to come back to it later.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={discard}
+              className="text-sm px-4 py-2 rounded-xl transition-all hover:opacity-80"
+              style={{ color: '#b91c1c', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.18)', fontFamily: "'DM Sans', sans-serif" }}>
+              Discard
+            </button>
+            <button onClick={() => setShowLeavePrompt(false)}
+              className="text-sm px-4 py-2 rounded-xl transition-all hover:opacity-80"
+              style={{ color: 'var(--tile-sub)', background: 'var(--glass-tile-bg)', border: '1px solid var(--glass-tile-bd)', fontFamily: "'DM Sans', sans-serif" }}>
+              Keep editing
+            </button>
+            <button onClick={saveAsDraft}
+              className="text-sm px-5 py-2 rounded-xl font-semibold transition-all hover:opacity-90"
+              style={{ background: pal?.dot || 'var(--accent)', color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
+              Save as draft
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }
 
