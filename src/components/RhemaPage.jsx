@@ -876,12 +876,34 @@ export default function RhemaPage({ themeId }) {
           onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(168,110,16,0.38)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 3px 12px rgba(168,110,16,0.28)'; e.currentTarget.style.transform = ''; }}
         >
-          <span>+ New Inscription</span>
+          <span>+ New Tablet</span>
           <span
             className="flex items-center justify-center w-7 h-7 rounded-full transition-all duration-300 group-hover:translate-x-0.5"
-            style={{ background: 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}
+            style={{ background: 'rgba(255,255,255,0.15)' }}
           >
-            ✦
+            <svg width="15" height="18" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="stoneGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#6b7280"/>
+                  <stop offset="60%" stopColor="#374151"/>
+                  <stop offset="100%" stopColor="#1f2937"/>
+                </linearGradient>
+              </defs>
+              {/* Drop shadow */}
+              <path d="M2.5 8.5V15C2.5 15.3 2.7 15.5 3 15.5H12.5C12.8 15.5 13 15.3 13 15V8.5H2.5Z" fill="#111827" opacity="0.5" transform="translate(0.5,0.8)"/>
+              <path d="M2.5 8.5C2.5 4.5 7.5 1.5 7.5 1.5C7.5 1.5 13 4.5 13 8.5H2.5Z" fill="#111827" opacity="0.5" transform="translate(0.5,0.8)"/>
+              {/* Main tablet body */}
+              <path d="M1.5 7.5V14C1.5 14.8 2.2 15.5 3 15.5H12C12.8 15.5 13.5 14.8 13.5 14V7.5H1.5Z" fill="url(#stoneGrad)" stroke="#1f2937" strokeWidth="0.5"/>
+              {/* Arched top */}
+              <path d="M1.5 7.5C1.5 7.5 1.5 1.5 7.5 1.5C13.5 1.5 13.5 7.5 13.5 7.5H1.5Z" fill="url(#stoneGrad)" stroke="#1f2937" strokeWidth="0.5"/>
+              {/* Light edge highlight (top-left) */}
+              <path d="M2 7C2 7 2.2 3 7.5 2.2" stroke="#9ca3af" strokeWidth="0.7" strokeLinecap="round" fill="none"/>
+              <line x1="2" y1="7.5" x2="2" y2="13" stroke="#9ca3af" strokeWidth="0.7" strokeLinecap="round"/>
+              {/* Engraved text lines */}
+              <line x1="3.5" y1="9.5" x2="11.5" y2="9.5" stroke="rgba(209,213,219,0.5)" strokeWidth="0.9" strokeLinecap="round"/>
+              <line x1="3.5" y1="11.5" x2="11.5" y2="11.5" stroke="rgba(209,213,219,0.5)" strokeWidth="0.9" strokeLinecap="round"/>
+              <line x1="3.5" y1="13.5" x2="8.5" y2="13.5" stroke="rgba(209,213,219,0.5)" strokeWidth="0.9" strokeLinecap="round"/>
+            </svg>
           </span>
         </button>
       </div>
@@ -975,9 +997,28 @@ export default function RhemaPage({ themeId }) {
               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 6px 20px rgba(168,110,16,0.38)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 3px 12px rgba(168,110,16,0.28)'; e.currentTarget.style.transform = ''; }}
             >
-              Record your first inscription
+              Record your first tablet
               <span className="flex items-center justify-center w-7 h-7 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.2)', fontSize: '0.9rem' }}>→</span>
+                style={{ background: 'rgba(255,255,255,0.15)' }}>
+                  <svg width="15" height="18" viewBox="0 0 15 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="stoneGrad2" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#6b7280"/>
+                        <stop offset="60%" stopColor="#374151"/>
+                        <stop offset="100%" stopColor="#1f2937"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M2.5 8.5V15C2.5 15.3 2.7 15.5 3 15.5H12.5C12.8 15.5 13 15.3 13 15V8.5H2.5Z" fill="#111827" opacity="0.5" transform="translate(0.5,0.8)"/>
+                    <path d="M2.5 8.5C2.5 4.5 7.5 1.5 7.5 1.5C7.5 1.5 13 4.5 13 8.5H2.5Z" fill="#111827" opacity="0.5" transform="translate(0.5,0.8)"/>
+                    <path d="M1.5 7.5V14C1.5 14.8 2.2 15.5 3 15.5H12C12.8 15.5 13.5 14.8 13.5 14V7.5H1.5Z" fill="url(#stoneGrad2)" stroke="#1f2937" strokeWidth="0.5"/>
+                    <path d="M1.5 7.5C1.5 7.5 1.5 1.5 7.5 1.5C13.5 1.5 13.5 7.5 13.5 7.5H1.5Z" fill="url(#stoneGrad2)" stroke="#1f2937" strokeWidth="0.5"/>
+                    <path d="M2 7C2 7 2.2 3 7.5 2.2" stroke="#9ca3af" strokeWidth="0.7" strokeLinecap="round" fill="none"/>
+                    <line x1="2" y1="7.5" x2="2" y2="13" stroke="#9ca3af" strokeWidth="0.7" strokeLinecap="round"/>
+                    <line x1="3.5" y1="9.5" x2="11.5" y2="9.5" stroke="rgba(209,213,219,0.5)" strokeWidth="0.9" strokeLinecap="round"/>
+                    <line x1="3.5" y1="11.5" x2="11.5" y2="11.5" stroke="rgba(209,213,219,0.5)" strokeWidth="0.9" strokeLinecap="round"/>
+                    <line x1="3.5" y1="13.5" x2="8.5" y2="13.5" stroke="rgba(209,213,219,0.5)" strokeWidth="0.9" strokeLinecap="round"/>
+                  </svg>
+                </span>
             </button>
           </div>
         </div>
