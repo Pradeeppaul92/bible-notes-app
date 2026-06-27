@@ -308,19 +308,66 @@ function ThreeDotsMenu({ id, menuOpen, setMenuOpen, onEdit, onDelete, entry }) {
 
 // ── Rhema Modal ───────────────────────────────────────
 
+const RHEMA_DRAFT_KEY = 'sefer_rhema_draft';
+
 export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource }) {
-  const [title,  setTitle]  = useState(entry?.title  || '');
-  const [type,   setType]   = useState(entry?.type   || defaultType || 'word');
-  const [source, setSource] = useState(entry?.source || defaultSource || '');
-  const [body,   setBody]   = useState(entry?.body   || '');
+  // Restore autosave draft for new entries
+  const savedDraft = !entry ? (() => { try { return JSON.parse(localStorage.getItem(RHEMA_DRAFT_KEY) || 'null'); } catch { return null; } })() : null;
+
+  const [title,  setTitle]  = useState(entry?.title  || savedDraft?.title  || '');
+  const [type,   setType]   = useState(entry?.type   || defaultType || savedDraft?.type || 'word');
+  const [source, setSource] = useState(entry?.source || defaultSource || savedDraft?.source || '');
+  const [body,   setBody]   = useState(entry?.body   || savedDraft?.body   || '');
 
   const [verseHint,       setVerseHint]       = useState(null);
   const [fuzzyHint,       setFuzzyHint]       = useState(null);
   const [versePreview,    setVersePreview]    = useState(null);
   const [loadingPreview,  setLoadingPreview]  = useState(false);
   const [showDelete,      setShowDelete]      = useState(false);
+  const [showLeavePrompt, setShowLeavePrompt] = useState(false);
 
   const pal = palette;
+
+  const hasContent = title.trim().length > 0 || body.trim().length > 0;
+
+  // Autosave draft to localStorage every 5 seconds while typing (new entries only)
+  useEffect(() => {
+    if (entry) return;
+    if (!hasContent) { localStorage.removeItem(RHEMA_DRAFT_KEY); return; }
+    const id = setInterval(() => {
+      localStorage.setItem(RHEMA_DRAFT_KEY, JSON.stringify({ title, type, source, body }));
+    }, 5000);
+    return () => clearInterval(id);
+  }, [title, type, source, body, hasContent, entry]);
+
+  function attemptClose() {
+    if (hasContent && !entry) {
+      setShowLeavePrompt(true);
+    } else {
+      onClose();
+    }
+  }
+
+  function saveAsDraft() {
+    saveRhemaEntry({
+      id:        `draft-${Date.now()}`,
+      title:     title.trim() || 'Untitled draft',
+      type,
+      source:    source.trim(),
+      body:      body.trim(),
+      isDraft:   true,
+      colorSlot: getRhemaEntries().length % RHEMA_SLOT_COUNT,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    localStorage.removeItem(RHEMA_DRAFT_KEY);
+    onClose();
+  }
+
+  function discard() {
+    localStorage.removeItem(RHEMA_DRAFT_KEY);
+    onClose();
+  }
 
   useEffect(() => {
     if (!verseHint?.verse) { setVersePreview(null); return; }
@@ -397,10 +444,12 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
       type,
       source:    source.trim(),
       body:      body.trim(),
+      isDraft:   false,
       colorSlot: entry?.colorSlot ?? (getRhemaEntries().filter((e) => e.id !== entry?.id).length % RHEMA_SLOT_COUNT),
       createdAt: entry?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+    localStorage.removeItem(RHEMA_DRAFT_KEY);
     onClose();
   }
 
@@ -414,7 +463,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-14"
       style={{ background: 'rgba(0,0,0,0.30)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      onClick={(e) => { if (e.target === e.currentTarget) attemptClose(); }}>
       <div className="glass-modal w-full max-w-2xl flex flex-col" style={{
         maxHeight: '90vh',
         borderColor: pal?.border || undefined,
@@ -432,11 +481,18 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-4 pb-4"
           style={{ borderBottom: `1px solid ${pal?.border || 'var(--tile-divider)'}` }}>
-          <h2 className="font-bold text-lg"
-            style={{ color: pal?.dot || 'var(--tile-text)', fontFamily: "Lora, Georgia, serif" }}>
-            {entry ? 'Edit Rhema' : 'New Rhema'}
-          </h2>
-          <button onClick={onClose} className="text-xl leading-none hover:opacity-60 transition"
+          <div>
+            <h2 className="font-bold text-lg"
+              style={{ color: pal?.dot || 'var(--tile-text)', fontFamily: "Lora, Georgia, serif" }}>
+              {entry?.isDraft ? 'Edit Draft' : entry ? 'Edit Rhema' : 'New Rhema'}
+            </h2>
+            {savedDraft && !entry && (
+              <p className="text-xs mt-0.5" style={{ color: 'var(--tile-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                ✦ Draft restored
+              </p>
+            )}
+          </div>
+          <button onClick={attemptClose} className="text-xl leading-none hover:opacity-60 transition"
             style={{ color: 'var(--tile-muted)' }}>✕</button>
         </div>
 
@@ -594,7 +650,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
           ) : <div />}
 
           <div className="flex gap-2 ml-auto shrink-0">
-            <button onClick={onClose}
+            <button onClick={attemptClose}
               className="text-sm px-4 py-2 rounded-xl transition-all"
               style={{ color: 'var(--tile-sub)', background: 'var(--glass-tile-bg)', border: '1px solid var(--glass-tile-bd)' }}>
               Cancel
@@ -612,6 +668,39 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
             </button>
           </div>
         </div>
+
+        {/* Leave / draft prompt */}
+        {showLeavePrompt && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-[1.5rem]"
+            style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', zIndex: 10 }}>
+            <div className="mx-6 rounded-2xl p-6 text-center"
+              style={{ background: 'var(--glass-content-bg)', border: '1px solid var(--glass-content-bd)', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
+              <p className="text-base font-semibold mb-1" style={{ color: 'var(--tile-text)', fontFamily: "Lora, Georgia, serif" }}>
+                Save your work?
+              </p>
+              <p className="text-xs mb-5" style={{ color: 'var(--tile-muted)', fontFamily: "'DM Sans', sans-serif" }}>
+                You have unsaved content. Save it as a draft to come back to it later.
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button onClick={discard}
+                  className="text-sm px-4 py-2 rounded-xl transition-all hover:opacity-80"
+                  style={{ color: '#b91c1c', background: 'rgba(185,28,28,0.08)', border: '1px solid rgba(185,28,28,0.18)', fontFamily: "'DM Sans', sans-serif" }}>
+                  Discard
+                </button>
+                <button onClick={() => setShowLeavePrompt(false)}
+                  className="text-sm px-4 py-2 rounded-xl transition-all hover:opacity-80"
+                  style={{ color: 'var(--tile-sub)', background: 'var(--glass-tile-bg)', border: '1px solid var(--glass-tile-bd)', fontFamily: "'DM Sans', sans-serif" }}>
+                  Keep editing
+                </button>
+                <button onClick={saveAsDraft}
+                  className="text-sm px-5 py-2 rounded-xl font-semibold transition-all hover:opacity-90"
+                  style={{ background: pal?.dot || 'var(--accent)', color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
+                  Save as draft
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -711,6 +800,19 @@ function RhemaCard({ entry, pal, onEdit, menuOpen, setMenuOpen }) {
             }}>
               {typeObj.icon} {typeObj.label}
             </span>
+            {entry.isDraft && (
+              <span style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: '0.11em',
+                textTransform: 'uppercase', fontFamily: "'DM Sans', sans-serif",
+                color: '#fff',
+                background: 'rgba(0,0,0,0.35)',
+                border: '1px solid rgba(255,255,255,0.25)',
+                padding: '2px 7px', borderRadius: 9999,
+                flexShrink: 0,
+              }}>
+                ✏ Draft
+              </span>
+            )}
             {entry.source && (
               <span style={{
                 fontSize: 11, color: 'rgba(255,255,255,0.65)',
