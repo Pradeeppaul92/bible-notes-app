@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, dialog, Menu, MenuItem } from 'electron';
 import path from 'path';
 import os from 'os';
 import { fileURLToPath } from 'url';
@@ -30,6 +30,44 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // Spell-check suggestions on right-click
+  win.webContents.on('context-menu', (_event, params) => {
+    const menu = new Menu();
+
+    if (params.misspelledWord) {
+      if (params.dictionarySuggestions.length > 0) {
+        for (const suggestion of params.dictionarySuggestions) {
+          menu.append(new MenuItem({
+            label: suggestion,
+            click: () => win.webContents.replaceMisspelling(suggestion),
+          }));
+        }
+      } else {
+        menu.append(new MenuItem({ label: 'No suggestions', enabled: false }));
+      }
+      menu.append(new MenuItem({ type: 'separator' }));
+      menu.append(new MenuItem({
+        label: 'Add to dictionary',
+        click: () => win.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord),
+      }));
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    if (params.isEditable || params.selectionText) {
+      if (params.isEditable) {
+        menu.append(new MenuItem({ role: 'cut' }));
+      }
+      menu.append(new MenuItem({ role: 'copy' }));
+      if (params.isEditable) {
+        menu.append(new MenuItem({ role: 'paste' }));
+      }
+    }
+
+    if (menu.items.length > 0) {
+      menu.popup({ window: win });
+    }
   });
 }
 
