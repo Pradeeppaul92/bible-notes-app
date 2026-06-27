@@ -325,10 +325,16 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
   const [loadingPreview,  setLoadingPreview]  = useState(false);
   const [showDelete,      setShowDelete]      = useState(false);
   const [showLeavePrompt, setShowLeavePrompt] = useState(false);
+  const [isDirty,         setIsDirty]         = useState(false);
 
   const pal = palette;
 
   const hasContent = title.trim().length > 0 || body.trim().length > 0;
+
+  // Prompt if: new entry with content, OR existing entry that has been touched
+  const shouldProtect = entry ? isDirty : hasContent;
+
+  function markDirty() { setIsDirty(true); }
 
   // Autosave draft to localStorage every 5 seconds while typing (new entries only)
   useEffect(() => {
@@ -341,7 +347,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
   }, [title, type, source, body, hasContent, entry]);
 
   function attemptClose() {
-    if (hasContent && !entry) {
+    if (shouldProtect) {
       setShowLeavePrompt(true);
     } else {
       onClose();
@@ -505,7 +511,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
           <input
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); markDirty(); }}
             placeholder="Title…"
             spellCheck={true}
             className="w-full rounded-xl px-4 py-3 text-base font-semibold glass-input"
@@ -519,7 +525,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setType(t.id)}
+                  onClick={() => { setType(t.id); markDirty(); }}
                   className="text-xs font-semibold px-3 py-1.5 rounded-full transition-all"
                   style={{
                     fontFamily: "'DM Sans', sans-serif",
@@ -535,7 +541,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
             <input
               type="text"
               value={source}
-              onChange={(e) => setSource(e.target.value)}
+              onChange={(e) => { setSource(e.target.value); markDirty(); }}
               placeholder="Source (optional – who, where…)"
               className="flex-1 min-w-[180px] rounded-xl px-3 py-2 text-sm glass-input"
               style={{ fontFamily: "'DM Sans', sans-serif" }}
@@ -545,7 +551,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
           {/* Body editor */}
           <RichTextEditor
             content={body}
-            onChange={setBody}
+            onChange={(val) => { setBody(val); markDirty(); }}
             onCursorChange={handleCursorChange}
             placeholder="Write what the Lord said…"
             minHeight={220}
@@ -688,7 +694,7 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
             Save your work?
           </p>
           <p className="text-xs mb-5" style={{ color: 'var(--tile-muted)', fontFamily: "'DM Sans', sans-serif" }}>
-            You have unsaved content. Save it as a draft to come back to it later.
+            {entry ? 'You have unsaved changes.' : 'You have unsaved content. Save it as a draft to come back to it later.'}
           </p>
           <div className="flex gap-3 justify-center">
             <button onClick={discard}
@@ -701,11 +707,19 @@ export function RhemaModal({ entry, palette, onClose, defaultType, defaultSource
               style={{ color: 'var(--tile-sub)', background: 'var(--glass-tile-bg)', border: '1px solid var(--glass-tile-bd)', fontFamily: "'DM Sans', sans-serif" }}>
               Keep editing
             </button>
-            <button onClick={saveAsDraft}
-              className="text-sm px-5 py-2 rounded-xl font-semibold transition-all hover:opacity-90"
-              style={{ background: pal?.dot || 'var(--accent)', color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
-              Save as draft
-            </button>
+            {entry ? (
+              <button onClick={() => { setShowLeavePrompt(false); handleSave(); }}
+                className="text-sm px-5 py-2 rounded-xl font-semibold transition-all hover:opacity-90"
+                style={{ background: pal?.dot || 'var(--accent)', color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
+                Save
+              </button>
+            ) : (
+              <button onClick={saveAsDraft}
+                className="text-sm px-5 py-2 rounded-xl font-semibold transition-all hover:opacity-90"
+                style={{ background: pal?.dot || 'var(--accent)', color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
+                Save as draft
+              </button>
+            )}
           </div>
         </div>
       </div>,
